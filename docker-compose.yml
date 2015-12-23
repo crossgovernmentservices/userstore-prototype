@@ -1,0 +1,26 @@
+worker:
+  build: .
+  env_file: docker-local.env
+  links:
+    - mongo
+  external_links:
+    - rabbitmqdocker_rabbit_1:rabbit
+  hostname: userstore-prototype-worker.local
+  volumes:
+    - ".:/usr/src/app"
+  command: "python worker.py"
+
+web:
+  build: .
+  env_file: docker-local.env
+  links:
+    - mongo
+  ports:
+    - "8080:8000"
+  hostname: userstore-prototype-web.local
+  volumes:
+    - ".:/usr/src/app"
+  command: "python manage.py server"
+
+mongo:
+  image: mongo:3.2

@@ -1,0 +1,34 @@
+
+{% extends "base.html" %}
+{% block body_content %}
+    <div class="grid-row">
+      <div class="column-two-thirds">
+        <h1 class="heading-large">Users</h1>
+
+        {% if users %}
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Created</th>
+              <th>Last login</th>
+              <th>N.I. No.</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for user in users %}
+            <tr>
+              <td>{{ user.email }}</td>
+              <td>{{ user.created.strftime('%c') }}</td>
+              <td>{{ user.last_login.strftime('%c') }}</td>
+              <td>{{ user.nino }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+      </div>
+    </div>
+{% endblock %}
+
