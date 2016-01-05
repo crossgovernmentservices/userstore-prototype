@@ -59,11 +59,13 @@ class SNSSQSWorker(object):
     def __init__(self):
         # create SNS topic
         self.sns = boto3.resource('sns')
-        self.topic = self.sns.create_topic(Name='Events')
+        self.topic = self.sns.create_topic(
+            Name=os.environ.get('SNS_TOPIC_NAME', 'EventsDev'))
 
         # create SQS queue
         self.sqs = boto3.resource('sqs')
-        self.queue = self.sqs.create_queue(QueueName='EventQueue')
+        self.queue = self.sqs.create_queue(
+            QueueName=os.environ.get('SQS_QUEUE_NAME', 'EventQueueDev'))
 
         # add policy to allow queue to receive messages from topic
         self.queue.set_attributes(Attributes={
