@@ -9,7 +9,7 @@
         <table>
           <thead>
             <tr>
-              <th>Email</th>
+              <th>User ID</th>
               <th>Created</th>
               <th>Last login</th>
               <th>N.I. No.</th>
@@ -18,7 +18,7 @@
           <tbody>
           {% for user in users %}
             <tr>
-              <td>{{ user.email }}</td>
+              <td>{{ user.user_id }}</td>
               <td>{{ user.created.strftime('%c') }}</td>
               <td>{{ user.last_login.strftime('%c') }}</td>
               <td>{{ user.nino }}</td>
