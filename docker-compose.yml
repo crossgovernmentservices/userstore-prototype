@@ -1,6 +1,8 @@
 worker:
   build: .
-  env_file: docker-local.env
+  env_file:
+   - ./docker-local.env
+   - ./docker-secret.env
   links:
     - mongo
   external_links:
