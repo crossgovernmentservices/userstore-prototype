@@ -15,8 +15,10 @@ import boto3
 
 logger = get_logger(__name__)
 
-exchange = Exchange('events', type='topic')
-queue = Queue('userstore-prototype', exchange)
+exchange = Exchange(os.environ.get('EVENTS_EXCHANGE_NAME', 'events'),
+                    type='topic')
+queue = Queue(os.environ.get('EVENTS_QUEUE_NAME', 'userstore-events'),
+              exchange)
 
 
 class Worker(ConsumerMixin):
