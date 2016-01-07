@@ -136,15 +136,15 @@ if __name__ == '__main__':
     # setup root logger
     setup_logging(loglevel='INFO', loggers=[''])
 
-    try:
-        worker = SNSSQSWorker()
-        worker.run()
-    except KeyboardInterrupt:
-        exit(0)
+    # try:
+    #     worker = SNSSQSWorker()
+    #     worker.run()
+    # except KeyboardInterrupt:
+    #     exit(0)
 
-    # with Connection(os.environ.get('BROKER_URI')) as conn:
-    #     try:
-    #         worker = Worker(conn)
-    #         worker.run()
-    #     except KeyboardInterrupt:
-    #         print('bye bye')
+    with Connection(os.environ.get('BROKER_URI')) as conn:
+        try:
+            worker = Worker(conn)
+            worker.run()
+        except KeyboardInterrupt:
+            exit(0)

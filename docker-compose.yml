@@ -5,8 +5,8 @@ worker:
    - ./docker-secret.env
   links:
     - mongo
-  # external_links:
-  #   - rabbitmqdocker_rabbit_1:rabbit
+  external_links:
+    - rabbitmqdocker_rabbit_1:rabbit
   hostname: userstore-prototype-worker.local
   volumes:
     - ".:/usr/src/app"
