@@ -1,3 +1,5 @@
+import json
+
 from flask import (
     Blueprint,
     abort,
@@ -8,6 +10,7 @@ from flask import (
 )
 
 from application.models import User
+
 
 frontend = Blueprint('frontend', __name__, template_folder='templates')
 
@@ -35,8 +38,12 @@ def links(id):
         user.link(other)
         return redirect(url_for('.index'))
 
-    if request.is_xhr:
-        return json.dumps({'ids': [
-            u.user_id for u in user.linked_ids]})
-
     return render_template('links.html', user=user)
+
+
+@frontend.route('/links/<id>.json')
+def links_json(id):
+    user = get_or_404(User, id=id)
+
+    return json.dumps({'ids': [
+        u.user_id for u in user.linked_ids]})
