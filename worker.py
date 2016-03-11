@@ -1,152 +1,64 @@
 #!/usr/bin/env python
-import os
-import json
 from datetime import datetime
+import os
 
-from kombu.mixins import ConsumerMixin
-from kombu.log import get_logger
 from kombu import Exchange, Queue
-
-from mongoengine import connect
+import mongoengine
 
 from application.models import User
 
-import boto3
 
-logger = get_logger(__name__)
-
-exchange = Exchange(os.environ.get('EVENTS_EXCHANGE_NAME', 'events'),
-                    type='topic')
-queue = Queue(os.environ.get('EVENTS_QUEUE_NAME', 'userstore-events'),
-              exchange)
-
-
-class Worker(ConsumerMixin):
-
-    def __init__(self, connection):
-        self.connection = connection
-        connect(host=os.environ.get('MONGO_URI'))
-
-    def get_consumers(self, Consumer, channel):
-        return [Consumer(queues=[queue],
-                         accept=['json'],
-                         callbacks=[self.process_message])]
-
-    def process_message(self, body, message):
-        logger.info('Got message: body=%s, message=%s', body, message)
-
-        if body['entity'] == 'USER' and body['action'] == 'LOGIN':
-            user_id = body['user_id'].strip()
-
-            # mongoengine fails to parse timestamp fields, so manually coerce
-            timestamp = datetime.fromtimestamp(float(body['timestamp']))
-
-            logger.info('Processing user: %s', user_id)
-            try:
-                user = User.objects.get(user_id=user_id)
-                action = 'Updated'
-            except User.DoesNotExist:
-                user = User(user_id=user_id, created=timestamp)
-                action = 'Created'
-
-            user.last_login = timestamp
-            user.save()
-
-            logger.info('%s user %s', action, user_id)
-            message.ack()
+exchange = Exchange(
+    os.environ.get('EVENTS_EXCHANGE_NAME', 'events'),
+    type='topic')
+queue = Queue(
+    os.environ.get('EVENTS_QUEUE_NAME', 'userstore-prototype'),
+    exchange)
+mongoengine.connect(host=os.environ.get('MONGO_URI'))
 
 
-class SNSSQSWorker(object):
+def is_login_message(body):
+    return (
+        isinstance(body, dict) and
+        body.get('entity') == 'USER' and
+        body.get('action') == 'LOGIN')
 
-    def __init__(self):
-        # create SNS topic
-        self.sns = boto3.resource('sns')
-        self.topic = self.sns.create_topic(
-            Name=os.environ.get('SNS_TOPIC_NAME', 'EventsDev'))
 
-        # create SQS queue
-        self.sqs = boto3.resource('sqs')
-        self.queue = self.sqs.create_queue(
-            QueueName=os.environ.get('SQS_QUEUE_NAME', 'EventQueueDev'))
+def parse_message(body):
+    uid = body['user_id'].strip()
+    timestamp = datetime.fromtimestamp(float(body['timestamp']))
 
-        # add policy to allow queue to receive messages from topic
-        self.queue.set_attributes(Attributes={
-            'Policy': json.dumps({
-                "Version": "2012-10-17",
-                "Id": "SNS-SQS-EventQueue-Policy",
-                "Statement": [{
-                    "Effect": "Allow",
-                    "Principal": {
-                        "AWS": "*",
-                    },
-                    "Action": "SQS:SendMessage",
-                    "Resource": self.queue.attributes['QueueArn'],
-                    "Condition": {
-                        "ArnEquals": {
-                            "aws:SourceArn": self.topic.attributes['TopicArn']
-                        }
-                    }
-                }]
-            })
-        })
+    return uid, timestamp
 
-        # subscribe queue to topic
-        self.topic.subscribe(
-            Protocol='sqs',
-            Endpoint=self.queue.attributes['QueueArn']
-        )
 
-    def run(self):
-        while True:
-            messages = self.queue.receive_messages(
-                WaitTimeSeconds=10,
-                MessageAttributeNames=['.*'])
+def record_login(uid, timestamp):
 
-            for message in messages:
-                # lol?
-                body = json.loads(json.loads(message.body)['Message'])
-                logger.info('Processing message with body %s', body)
-                self.process_message(body, message)
+    try:
+        user = User.objects.get(user_id=uid)
 
-    def process_message(self, body, message):
-        logger.info('Got message: body=%s, message=%s', body, message)
+    except User.DoesNotExist:
+        user = User.objects.create(user_id=uid, created=timestamp)
 
-        if body['entity'] == 'USER' and body['action'] == 'LOGIN':
-            user_id = body['user_id'].strip()
+    user.update(last_login=timestamp)
 
-            # mongoengine fails to parse timestamp fields, so manually coerce
-            timestamp = datetime.fromtimestamp(float(body['timestamp']))
 
-            logger.info('Processing user: %s', user_id)
-            try:
-                user = User.objects.get(user_id=user_id)
-                action = 'Updated'
-            except User.DoesNotExist:
-                user = User(user_id=user_id, created=timestamp)
-                action = 'Created'
+def process_message(body, message):
 
-            user.last_login = timestamp
-            user.save()
-
-            logger.info('%s user %s', action, user_id)
-            message.delete()
+    if is_login_message(body):
+        record_login(*parse_message(body))
+        message.ack()
 
 
 if __name__ == '__main__':
     from kombu import Connection
-    from kombu.utils.debug import setup_logging
-    # setup root logger
-    setup_logging(loglevel='INFO', loggers=[''])
 
-    # try:
-    #     worker = SNSSQSWorker()
-    #     worker.run()
-    # except KeyboardInterrupt:
-    #     exit(0)
+    conn = Connection(os.environ.get('BROKER_URI'))
 
-    with Connection(os.environ.get('BROKER_URI')) as conn:
+    with conn.Consumer(queue, callbacks=[process_message]) as consumer:
+
         try:
-            worker = Worker(conn)
-            worker.run()
+            while True:
+                conn.drain_events()
+
         except KeyboardInterrupt:
-            exit(0)
+            pass
