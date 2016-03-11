@@ -1,0 +1,30 @@
+
+{% extends "base.html" %}
+{% block body_content %}
+    <div class="grid-row">
+      <div class="column-two-thirds">
+        <h1 class="heading-large">Identities linked with {{ user.user_id }}</h1>
+
+        <table>
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Created</th>
+              <th>Last login</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for u in user.linked_ids %}
+            <tr>
+              <td>{{ u.user_id }}</td>
+              <td>{{ u.created.strftime('%c') }}</td>
+              <td>{{ u.last_login.strftime('%c') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+
+      </div>
+    </div>
+{% endblock %}
+

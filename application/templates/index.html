@@ -12,16 +12,27 @@
               <th>User ID</th>
               <th>Created</th>
               <th>Last login</th>
-              <th>N.I. No.</th>
+              <th>Linked IDs</th>
             </tr>
           </thead>
           <tbody>
           {% for user in users %}
             <tr>
-              <td>{{ user.user_id }}</td>
+              <td><a href="{{ url_for('frontend.links', id=user.id) }}">{{ user.user_id }}</a></td>
               <td>{{ user.created.strftime('%c') }}</td>
               <td>{{ user.last_login.strftime('%c') }}</td>
-              <td>{{ user.nino }}</td>
+              <td>
+                <form method="post" action="{{ url_for('frontend.links', id=user.id) }}">
+                  <select name="user_id">
+                    {% for other in users %}
+                    {% if other != user and other not in user.linked_ids %}
+                    <option value="{{ '' ~ other.id }}">{{ other.user_id }}</option>
+                    {% endif %}
+                    {% endfor %}
+                  </select>
+                  <button>Link</button>
+                </form>
+              </td>
             </tr>
           {% endfor %}
           </tbody>
