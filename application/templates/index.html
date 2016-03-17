@@ -1,9 +1,26 @@
 
 {% extends "base.html" %}
 {% block body_content %}
+    <script src="/static/javascripts/vendor/jquery.min.js"></script>
+
     <div class="grid-row">
       <div class="column-two-thirds">
         <h1 class="heading-large">Users</h1>
+
+        <form class="popup" method="post" action="{{ url_for('frontend.add_user') }}">
+          <a class="toggle" href="#">+ add user</a>
+          <fieldset class="hidden">
+            <label>User ID <input name="user_id"></label>
+            <button>Add</button>
+          </fieldset>
+        </form>
+
+        <script>
+$('.popup .toggle').on('click', function (event) {
+  $(event.target).siblings('.hidden').toggle();
+});
+$('.popup .hidden').css({'visibility': 'visible'});
+        </script>
 
         {% if users %}
         <table>
@@ -19,8 +36,8 @@
           {% for user in users %}
             <tr>
               <td><a href="{{ url_for('frontend.links', id=user.id) }}">{{ user.user_id }}</a></td>
-              <td>{{ user.created.strftime('%c') }}</td>
-              <td>{{ user.last_login.strftime('%c') }}</td>
+              <td>{% if user.created %}{{ user.created.strftime('%c') }}{% endif %}</td>
+              <td>{% if user.last_login %}{{ user.last_login.strftime('%c') }}{% endif %}</td>
               <td>
                 <form method="post" action="{{ url_for('frontend.links', id=user.id) }}">
                   <select name="user_id">
